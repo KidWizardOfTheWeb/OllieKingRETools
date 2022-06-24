@@ -1,4 +1,4 @@
-# Ollie King Stages (Arcade)
+# Ollie King (Arcade)
 # Noesis script by KC 2022
 # Last updated: 7 June 2022
 
@@ -151,11 +151,9 @@ def bcLoadModel(data, mdlList):
         if entry_type == 0x112:							# bone info
             bs.seek(offset + 0x20)
             pos = NoeVec3.fromBytes(bs.readBytes(12))
-            # matrix = NoeQuat([0, 0, 0, 1]).toMat43()
             matrix = NoeAngles([0,0,90]).toMat43()
-            pos[2] *= -1 # had to add this recently, something changed with the script and it didn't automatically fix it anymore so this properly flips Z coords of bone position to be on the mesh
+            pos[2] *= -1 # had to add this recently, something changed with the script and it didn't automatically fix Z coords pos anymore so this properly flips Z coords of bone positions to be on the mesh
             matrix[3] = pos
-            # print(pos)
             bones.append(NoeBone(bone_num, "Bone_" + str(bone_num), matrix, None, parent_info[bone_num]))
             bone_num += 1
 
