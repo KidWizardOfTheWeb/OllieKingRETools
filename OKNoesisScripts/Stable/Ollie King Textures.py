@@ -56,9 +56,14 @@ def bcLoadRGBA(data, tex_list):
             raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
-        elif img_type == 4:										# same as type 1 ?
-            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
+        elif img_type == 4:										
+            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b4g4r4a4")
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+            
+        # Old line kept in case there's actually a missing texture type to add back later.
+        # elif img_type == 4:                                   # same as type 1 ?
+        #     raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
+        #     tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
         else:
             print("Unknown image type: ", img_type, "at ", hex(offset))
