@@ -1,5 +1,5 @@
 # OllieKingRETools
-Tools for extraction of models, textures, animations, and more from Ollie King 
+Tools for extraction of models, textures, animations, and more from Ollie King.
 
 -General info-
 The tools you will find in this repository will include scripts designed for use with numerous programs such as noesis and blender. However, I do not provide any assets from the game in this repository, as this repository is only for scripting designed to parse and extract said assets.
