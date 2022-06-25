@@ -2,7 +2,10 @@ Noesis script explanation by Kid Chameleon (aka KC)
 Original repo: https://github.com/KidWizardOfTheWeb/OllieKingRETools
 -General notes-
 These scripts are for explicit usage within noesis, the 3D model viewer application. Simply drag and drop the script into the python folder inside of the plugins folder. These folders are in your directory for noesis.
+The stable folder are the scripts that are in a working state and only no/minor issues at most. They should be usable for everyone with minimal user input.
+The experimental folder are scripts that aren't in a fully working state currently, and have a lot of spaghetti code/comments/temporary workings until the issues are resolved. The audience script at the time of writing (06/25/2022) works for exporting without animations only and has the proper armature setup. Attempting to apply audience animation files will not give correct output. The stage script needs cleanup and reworking to accept different entry types, but doesn't get to even parse model data in its current state. If you wish to fix these issues, send a PR.
 
+Stable scripts:
 -mdbPlayer script-
 This script obtains the model, armature, textures, and optionally animations for the models. The model, armature, and textures will be automatically loaded once you select a model from the player folder (textures will try to find the texture file if it has the same name as the player file, i.e. grinner.mdb will try to find grinner.txb). Another window will open to ask for another file, which is for selecting individual animation files (.mtb). These are entirely optional and the window can be closed by hitting the cancel button or the esc key to only load the model, armatures, and it's textures. Other models, such as stage parts and audience member models do not load properly with this script and will have separate scripts to account for them. You can export this file without any other commands needed, .fbx model type should get you by for general usage. The textures are outputted as .bmp images with the model as well.
 
@@ -10,3 +13,8 @@ Advanced notes: There is an option that is commented out in this script that all
 
 -Textures script-
 This script reads only the textures (.txb) from the game. Helpful if you just want to view the textures separated, or need a specific texture that don't have a model file (i.e. "s1_section.txb" doesn't have a corresponding model file so it won't automatically be searched for, or exporting the alternate color variants for characters since the model script only searches for the main color). Export works with any image format noesis supports. The original format is DDS, so export to PNG works alright if the default bmp image type is not what you need. 
+
+Experimental scripts that currently function decently:
+
+-Audience model script-
+Similar to the player model script, you can follow all of those instructions. However, NO ANIMATION FILES WORK, as they don't apply properly to the armature at the moment. Skip that step and they should export fine. Will be updated in the future...
