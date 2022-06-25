@@ -1,5 +1,5 @@
 # Ollie King (Arcade)
-# Original Noesis script by Dave, 2021
+# Original Noesis script by DKDave, 2021
 # Derived texture section to separate script by KC
 # Last updated: 24 June 2022
 
