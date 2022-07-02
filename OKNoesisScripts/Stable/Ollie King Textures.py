@@ -62,6 +62,20 @@ def bcLoadRGBA(data, tex_list):
             
         elif img_type == 9: # Similar to 8, listed as different image type
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_DXT5)
+        
+        elif img_type == 6: # A single image uses this: obi.txb
+            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "r8g8b8a8")
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+
+        elif img_type == 3: # A single image uses this: s6_area02.txb
+            # TODO: Confirm if this is the proper RGBA format. This is the closest so far. The 60th image in the file uses this format specifically.
+            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+
+        # elif img_type == 5: # Strange format, closest is r8g8_uint in raw texture cooker, might be another format. 
+        # Used in London stages and Kyoto skyboxes: s2_area16.txb, s5_area02.txb, s5_area18.txb, s3_tenkyu.txb, s6_tenkyu.txb
+        #     raw_image = rapi.imageDecodeRaw(raw_image, width, width, "r8g8_uint?")
+        #     tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
         else:
             print("Unknown image type: ", img_type, "at ", hex(offset))
