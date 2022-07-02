@@ -1,7 +1,7 @@
 # Ollie King (Arcade)
 # Original Noesis script by DKDave, 2021
 # Derived texture section to separate script by KC
-# Last updated: 24 June 2022
+# Last updated: 1 July 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -45,7 +45,7 @@ def bcLoadRGBA(data, tex_list):
         bs.seek(offset + 0x20)
         raw_image = bs.readBytes(data_size)
 
-        #TODO: Add other image types, a select few are missing currently
+        
         if img_type == 7:
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_DXT1)
 
@@ -60,10 +60,8 @@ def bcLoadRGBA(data, tex_list):
             raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b4g4r4a4")
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
             
-        # Old line kept in case there's actually a missing texture type to add back later.
-        # elif img_type == 4:                                   # same as type 1 ?
-        #     raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
-        #     tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+        elif img_type == 9: # Similar to 8, listed as different image type
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_DXT5)
 
         else:
             print("Unknown image type: ", img_type, "at ", hex(offset))
