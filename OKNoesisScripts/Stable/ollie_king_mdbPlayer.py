@@ -1,6 +1,6 @@
 # Ollie King (Arcade)
 # Noesis script by DKDave (Original script), Joschka, and KC
-# Last updated: 7 June 2022
+# Last updated: 6 July 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -112,10 +112,14 @@ def bcLoadModel(data, mdlList):
 
     mesh_name = curr_file.replace(".mdb", "")
     # Some models have motion mesh versions, others are simple versions. If-statement below makes sure that the proper texture file names are read later if selected
-    if "_n" in mesh_name:
-      mesh_name = mesh_name.replace("_n", "") 
-    if "_s" in mesh_name:
-      mesh_name = mesh_name.replace("_s", "")
+    nunoCheck = False
+    if "_nuno" in mesh_name:
+      mesh_name = mesh_name.replace("_nuno", "")
+      nunoCheck = True
+    elif "_n" in mesh_name:
+        mesh_name = mesh_name.replace("_n", "") 
+    elif "_s" in mesh_name:
+        mesh_name = mesh_name.replace("_s", "")
 
     txb_file = curr_folder + mesh_name + ".txb"
     mesh_num = 0
@@ -131,7 +135,15 @@ def bcLoadModel(data, mdlList):
     bones = []
     bone_num = 0
 
-    parent_info = [-1, 0, 1, 2, 3, 4, 4, 6, 7, 8, 4, 10, 11, 12, 1, 14, 15, 1, 17, 18, 0]				# default parent info for all skeletons
+    parent_info = [-1, 0, 1, 2, 3, 4, 4, 6, 7, 8, 4, 10, 11, 12, 1, 14, 15, 1, 17, 18, 0]				# default parent info for all player model skeletons
+    # The if-statement branch below gives the proper parenting to the motion meshes when loaded in. The two characters with exceptions to the norm have their own included here.
+    if nunoCheck == True:
+        if "didi" in mesh_name:
+            parent_info = [-1, 0, 1, 0, 3, 0, 5, 0, 7, 0, 9]				# parent info for didi motion mesh skeleton
+        elif "grinner" in mesh_name:
+            parent_info = [-1, 0, 1, 2, 3, 4, 0, 6, 7, 8, 9, 0, 11, 12, 13, 14, 0, 16, 17, 18, 19]				# parent info for grinner motion mesh skeleton
+        else:
+            parent_info = [-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19]              # default parent info for other motion mesh skeletons
 
     bs.seek(8)
     table2 = bs.readUInt() + 0x20
