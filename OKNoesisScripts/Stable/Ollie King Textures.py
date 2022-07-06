@@ -1,7 +1,7 @@
 # Ollie King (Arcade)
 # Original Noesis script by DKDave, 2021
 # Derived texture section to separate script by KC
-# Last updated: 1 July 2022
+# Last updated: 6 July 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -72,10 +72,10 @@ def bcLoadRGBA(data, tex_list):
             raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
-        # elif img_type == 5: # Strange format, closest is r8g8_uint in raw texture cooker, might be another format. 
+        elif img_type == 5: # Strange format, closest is r8g8_uint in raw texture cooker/b8g8r8a8, might be another format. 
         # Used in London stages and Kyoto skyboxes: s2_area16.txb, s5_area02.txb, s5_area18.txb, s3_tenkyu.txb, s6_tenkyu.txb
-        #     raw_image = rapi.imageDecodeRaw(raw_image, width, width, "r8g8_uint?")
-        #     tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b8g8r8a8")
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
         else:
             print("Unknown image type: ", img_type, "at ", hex(offset))
