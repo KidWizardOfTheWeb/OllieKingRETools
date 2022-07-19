@@ -1,6 +1,6 @@
 # Ollie King Stages script (Arcade)
 # Noesis script by KC, 2022
-# Last updated: 17 July 2022
+# Last updated: 18 July 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -48,23 +48,25 @@ def bcLoadModel(data, mdlList):
 
     bs.seek(meshInfoStart) # Changed seek to manual input for current usage
     vert_offset = meshInfoStart + 0x20
+    print("Vert offset: " + hex(vert_offset))
     vert_count = bs.readUInt()
-    print(vert_count)
+    print("Vert count: " + str(vert_count))
     face_count = bs.readUInt()
-    print(face_count)
+    print("Face count: " + str(face_count))
     stage_type = bs.readUInt()
-    print(hex(stage_type))
+    print("Stage type: " + hex(stage_type))
     extra_info = bs.readUInt()
-    print(hex(extra_info))
+    print("Extra info: " + hex(extra_info))
     # Depending on stage type, change vertex padding/stride.
     if stage_type == 0x0142:
-        stride_value = 0xC
+        stride_value = 0x12
     elif stage_type == 0x0242:
-        stride_value = 0x14
+        stride_value = 0x20
     elif stage_type == 0x0112:
-        stride_value = 0x14
+        stride_value = 0x20
     elif stage_type == 0x0212:
-        stride_value = 0x18
+        stride_value = 0x28
+    print("Stride value: " + str(stride_value))
     # table2 = bs.readUInt()
     # table2_size = bs.readUInt()
     # table1 = bs.readUInt()
@@ -98,15 +100,42 @@ def bcLoadModel(data, mdlList):
         # bs.seek(vert_offset) # vert offset determined by user input
     vertices = bytes()
     vertices = bs.readBytes(vert_count * stride_value)
+    vertList = bytearray(list(vertices))
+    # print(str(vertList))
+    print(", ".join(hex(b) for b in vertList))
 
     # for v in range(vert_count):
-    #     vx, vy, vz, unk1 = bs.read("4f")
-    #     b_idx = bs.read("I")[0]
-    #     nx, ny, nz = bs.read("3f")
-    #     uvx, uvy = bs.read("2f")
-    #     vz = vz
-    #     vertices += noePack("ffffIfffff", vx, vy, vz, unk1, b_idx, nx, ny, nz, uvx, uvy)
-
+    #     vx, vy, vz = bs.read("3f")
+    #     unk1 = bs.read("1f")
+    #     # vx, vy, vz, unk1 = bs.read("4f")
+    #     print("Vertex " + str(v+1) + ": " + str(vx) + ", " + str(vy) + ", " + str(vz))
+    #     # print("Vertex " + str(v) + ": " + str(vx) + ", " + str(vy) + ", " + str(vz) + ", " + str(unk1))
+    #     if stage_type == 0x0142:
+    #         pad1 = bs.readUInt64()
+    #         pad2 = bs.readFloat()
+    #         # print ("Pad " + str(v+1) + ": "+ str(pad1) + ", " + str(pad2))
+    #     elif stage_type == 0x0242:
+    #         pad1 = bs.readUInt64()
+    #         pad2 = bs.readUInt64()
+    #         # print ("Pad " + str(v+1) + ": "+ str(pad1) + ", " + str(pad2))
+    #     elif stage_type == 0x0112:
+    #         pad1 = bs.readUInt64()
+    #         pad2 = bs.readUInt64()
+    #         # print ("Pad " + str(v+1) + ": "+ str(pad1) + ", " + str(pad2))
+    #     elif stage_type == 0x0212:
+    #         pad1 = bs.readUInt64()
+    #         pad2 = bs.readUInt64()
+    #         pad3 = bs.readUInt64()
+    #         pad4 = bs.readFloat()
+    #         # print ("Pad " + str(v+1) + ": "+ str(pad1) + ", " + str(pad2) + ", " + str(pad3) + ", " + str(pad4))
+    #     # vx, vy, vz = bs.read("3f")
+    #     # b_idx = bs.read("I")[0]
+    #     # nx, ny, nz = bs.read("3f")
+    #     # uvx, uvy = bs.read("2f")
+    #     # vz = vz
+    #     vertices += noePack("3f", vx, vy, vz)
+    # #     # vertices += noePack("ffffIfffff", vx, vy, vz, unk1, b_idx, nx, ny, nz, uvx, uvy)
+    # #     # print(noeUnpack("f", vertices))
     bs.seek(faceStart) # face offset determined by user input
     faces = bs.readBytes(face_count * 2)
 
