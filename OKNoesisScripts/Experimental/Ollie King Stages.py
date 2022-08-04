@@ -1,6 +1,6 @@
 # Ollie King Stages script (Arcade)
 # Noesis script by KC, 2022
-# Last updated: 18 July 2022
+# Last updated: 3 August 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -59,14 +59,32 @@ def bcLoadModel(data, mdlList):
     print("Extra info: " + hex(extra_info))
     # Depending on stage type, change vertex padding/stride.
     if stage_type == 0x0142:
-        stride_value = 0x12
+        vert_Stride_Value = 0x12
+        UV_Stride_Value = 0x16
+        hasNormals = False
+        #Normals start at vert_offset + 0xc
+        #UVs start at vert_offset + 0x18
     elif stage_type == 0x0242:
-        stride_value = 0x20
+        vert_Stride_Value = 0x20
+        UV_Stride_Value = 0x24
+        hasNormals = False
+        #Normalss start at vert_offset + 0xc
+        #UVs start at vert_offset + 0x18
     elif stage_type == 0x0112:
-        stride_value = 0x20
+        vert_Stride_Value = 0x20
+        Normals_Stride_Value = 0x20
+        UV_Stride_Value = 0x24
+        hasNormals = True
+        #Normals start at vert_offset + 0xc
+        #UVs start at vert_offset + 0x18
     elif stage_type == 0x0212:
-        stride_value = 0x28
-    print("Stride value: " + str(stride_value))
+        vert_Stride_Value = 0x28
+        Normals_Stride_Value = 0x28
+        UV_Stride_Value = 0x32
+        hasNormals = True
+        #Normals start at vert_offset + 0xc
+        #UVs start at vert_offset + 0x18
+    print("Vertex stride value: " + str(vert_Stride_Value))
     # table2 = bs.readUInt()
     # table2_size = bs.readUInt()
     # table1 = bs.readUInt()
@@ -99,10 +117,28 @@ def bcLoadModel(data, mdlList):
 
         # bs.seek(vert_offset) # vert offset determined by user input
     vertices = bytes()
-    vertices = bs.readBytes(vert_count * stride_value)
+    vertices = bs.readBytes(vert_count * vert_Stride_Value)
     vertList = bytearray(list(vertices))
     # print(str(vertList))
     print(", ".join(hex(b) for b in vertList))
+
+    if hasNormals:
+        # Normals reading
+        bs.seek(vert_offset + 0xc)
+        # <- replace 0xc with value designated by stage type
+        normals = bytes()
+        normals = bs.readBytes(vert_count * Normals_Stride_Value)
+        # normalsList = bytearray(list(normals))
+        # print(", ".join(hex(b) for b in normalsList))
+
+    # UVs reading
+    bs.seek(vert_offset + 0x18)
+    #  <- replace 0x18 with value designated by stage type
+    UV = bytes()
+    UV = bs.readBytes(vert_count * UV_Stride_Value)
+    # UVsList = bytearray(list(UV))
+    # print(", ".join(hex(b) for b in UVsList))
+
 
     # for v in range(vert_count):
     #     vx, vy, vz = bs.read("3f")
@@ -140,9 +176,10 @@ def bcLoadModel(data, mdlList):
     faces = bs.readBytes(face_count * 2)
 
     rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
-    rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, stride_value, 0)
-    # rapi.rpgBindNormalBufferOfs(vertices, noesis.RPGEODATA_FLOAT, stride_value, 0x14)
-    # rapi.rpgBindUV1BufferOfs(vertices, noesis.RPGEODATA_FLOAT, stride_value, 0x20)
+    rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, vert_Stride_Value, 0)
+    if hasNormals:
+        rapi.rpgBindNormalBufferOfs(normals, noesis.RPGEODATA_FLOAT, Normals_Stride_Value, 0)
+    rapi.rpgBindUV1BufferOfs(UV, noesis.RPGEODATA_FLOAT, UV_Stride_Value, 0)
     # rapi.rpgSetMaterial("Material_" + str(tex_num))
     # rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, 0x28, 0)
     # # rapi.rpgBindBoneIndexBufferOfs(vertices, noesis.RPGEODATA_UBYTE, 0x28, 0x10, 4)
