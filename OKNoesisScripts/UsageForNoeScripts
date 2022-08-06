@@ -3,7 +3,7 @@ Original repo: https://github.com/KidWizardOfTheWeb/OllieKingRETools
 -General notes-
 These scripts are for explicit usage within noesis, the 3D model viewer application. Simply drag and drop the script into the python folder inside of the plugins folder. These folders are in your directory for noesis.
 The stable folder are the scripts that are in a working state and only no/minor issues at most. They should be usable for everyone with minimal user input.
-The experimental folder are scripts that aren't in a fully working state currently, and have a lot of spaghetti code/comments/temporary workings until the issues are resolved. The audience script at the time of writing (06/25/2022) works for exporting without animations only and has the proper armature setup. Attempting to apply audience animation files will not give correct output. The stage script needs cleanup and reworking to accept different entry types, but doesn't get to even parse model data in its current state. If you wish to fix these issues, send a PR.
+The experimental folder are scripts that aren't in a fully working state currently, and have a lot of spaghetti code/comments/temporary workings until the issues are resolved. The audience script at the time of writing (06/25/2022) works for exporting without animations only and has the proper armature setup. Attempting to apply audience animation files will not give correct output. The stage script parses some model data in its current state, but needs support for textures and more models with discrepancies. If you wish to fix these issues, send a PR.
 
 Stable scripts:
 -mdbPlayer script-
