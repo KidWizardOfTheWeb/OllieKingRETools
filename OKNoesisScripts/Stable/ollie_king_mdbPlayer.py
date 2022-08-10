@@ -1,6 +1,6 @@
 # Ollie King (Arcade)
 # Noesis script by KC 2022
-# Last updated: 6 August 2022
+# Last updated: 10 August 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -225,7 +225,7 @@ def bcLoadModel(data, mdlList):
     # animations
     anims = []
     dataTemp = None
-    selectAllAnims = noesis.userPrompt(noesis.NOEUSERVAL_INT, "Load all animations", "Type 1 to load all animations in the motion folder, type 0 to select animations instead.", "0")
+    selectAllAnims = noesis.userPrompt(noesis.NOEUSERVAL_INT, "Load all animations?", "Type 1 to load all anims in the motion folder, 0 to select animations, or cancel to load none.", "0")
     if selectAllAnims == 1:
         for i in range (613):
             mtb_file = curr_folder + "\Motion\\" + animNames[i] + ".mtb" # Get the file path and increment through them sequentially.
@@ -234,13 +234,15 @@ def bcLoadModel(data, mdlList):
             else:
                 print("Animations not found.") # Error message if the director is not located
             anims.append(bcLoadAnims(dataTemp, animNames[i], bones)) # After import, append to rig
-    else:
+    elif selectAllAnims == 0:
         animPath = rapi.loadPairedFileGetPath("animation file", ".mtb")
         while(animPath):
             animName = os.path.basename(animPath[1])[:-4] # Filename without extension
             anims.append(bcLoadAnims(animPath[0], animName, bones)) # After import, append to rig
 
             animPath = rapi.loadPairedFileGetPath("animation file", ".mtb")
+    else: 
+        None
 
     try:
         mdl = rapi.rpgConstructModel()
