@@ -1,6 +1,6 @@
 # Ollie King Stages script (Arcade)
 # Noesis script by KC, 2022
-# Last updated: 3 August 2022
+# Last updated: 10 August 2022
 
 # ** WORK IN PROGRESS! **
 
@@ -35,16 +35,16 @@ def bcLoadModel(data, mdlList):
     mesh_num = 0
 
     # Changed to manual file choosing for testing, removed functionality until texture IDs are found
-    # txb_file = rapi.loadPairedFileGetPath("texture file", ".txb")
-    # while(txb_file):
-    #     tex_file = NoeBitStream(rapi.loadIntoByteArray(txb_file[1]))
-    #     mat_list, tex_list = ReadTextures(tex_file)
-    #     txb_file = rapi.loadPairedFileGetPath("texture file file", ".txb")
+    txb_file = rapi.loadPairedFileGetPath("texture file", ".txb")
+    while(txb_file):
+        tex_file = NoeBitStream(rapi.loadIntoByteArray(txb_file[1]))
+        mat_list, tex_list = ReadTextures(tex_file)
+        txb_file = rapi.loadPairedFileGetPath("texture file file", ".txb")
     # print("Proceeding to mesh parsing...") # Once complete, display message before attempting to find entry point.
 
     meshInfoStart = noesis.userPrompt(noesis.NOEUSERVAL_INT, "Mesh info starting address entry", "Enter the address where the mesh info starts at (about 0x20 before actual mesh start).", "0x0")
     faceStart = noesis.userPrompt(noesis.NOEUSERVAL_INT, "Face info starting address entry", "Enter the address where the face info starts at (after mesh end).", "0x0")
-    primPrompt = noesis.userPrompt(noesis.NOEUSERVAL_INT, "Primative type entry", "Enter 0 for triangle primatives, or enter 1 for tristrip primatives.", "0")
+    primPrompt = noesis.userPrompt(noesis.NOEUSERVAL_INT, "Primitive type entry", "Enter 0 for triangle primatives, or enter 1 for tristrip primatives.", "0")
 
     bs.seek(meshInfoStart) # Changed seek to manual input for current usage
     vert_offset = meshInfoStart + 0x20
@@ -57,6 +57,8 @@ def bcLoadModel(data, mdlList):
     print("Stage type: " + hex(stage_type))
     extra_info = bs.readUInt()
     print("Extra info: " + hex(extra_info))
+
+    vert_Stride_Value = None
     # Depending on stage type, change vertex padding/stride.
     if stage_type == 0x0142:
         vert_Stride_Value = 0x12
@@ -118,9 +120,9 @@ def bcLoadModel(data, mdlList):
         # bs.seek(vert_offset) # vert offset determined by user input
     vertices = bytes()
     vertices = bs.readBytes(vert_count * vert_Stride_Value)
-    vertList = bytearray(list(vertices))
+    # vertList = bytearray(list(vertices))
     # print(str(vertList))
-    print(", ".join(hex(b) for b in vertList))
+    # print(", ".join(hex(b) for b in vertList))
 
     if hasNormals:
         # Normals reading
@@ -179,7 +181,10 @@ def bcLoadModel(data, mdlList):
     rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, vert_Stride_Value, 0)
     if hasNormals:
         rapi.rpgBindNormalBufferOfs(normals, noesis.RPGEODATA_FLOAT, Normals_Stride_Value, 0)
-    rapi.rpgBindUV1BufferOfs(UV, noesis.RPGEODATA_FLOAT, UV_Stride_Value, 0)
+        rapi.rpgBindUV1BufferOfs(UV, noesis.RPGEODATA_FLOAT, UV_Stride_Value, 0)
+    else:
+        rapi.rpgBindNormalBufferOfs(None, noesis.RPGEODATA_FLOAT, Normals_Stride_Value, 0)
+        rapi.rpgBindUV1BufferOfs(UV, noesis.RPGEODATA_FLOAT, UV_Stride_Value, 0)
     # rapi.rpgSetMaterial("Material_" + str(tex_num))
     # rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, 0x28, 0)
     # # rapi.rpgBindBoneIndexBufferOfs(vertices, noesis.RPGEODATA_UBYTE, 0x28, 0x10, 4)
@@ -213,7 +218,7 @@ def bcLoadModel(data, mdlList):
     except:
         mdl = NoeModel()
 
-    # mdl.setModelMaterials(NoeModelMaterials(tex_list, mat_list))
+    mdl.setModelMaterials(NoeModelMaterials(tex_list, mat_list))
     # mdl.setBones(bones)
     mdlList.append(mdl)
 
@@ -241,6 +246,8 @@ def ReadTextures(bs):
         bs.seek(offset + 0x20)
         raw_image = bs.readBytes(data_size)
 
+        curr_file = rapi.getLocalFileName(rapi.getInputName()).lower()
+
         if img_type == 7:
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_DXT1)
 
@@ -251,8 +258,31 @@ def ReadTextures(bs):
             raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
-        elif img_type == 4:										# same as type 1 ?
-            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b5g5r5p1")
+        elif img_type == 4:
+            # What is this lmfao.
+            print("Image type: ", img_type, "at ", hex(offset), "Image number: ", str(a))					
+            raw_image = rapi.imageDecodeRaw(raw_image, width, width, "b4g4r4a4")
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+
+        elif img_type == 9: # Similar to 8, listed as different image type
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_DXT5)
+
+        elif img_type == 6: # Used for first image of s3_tenkyu and obi. They are different formats however, so edgecase is used.
+            if curr_file == "obi.txb":
+                raw_image = rapi.imageDecodeRaw(raw_image, width, width, "r8g8b8a8")
+                tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+            else:
+                raw_image = rapi.imageFromMortonOrder(raw_image, width, width)
+                tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
+
+        elif img_type == 3: # Xbox Morton order.
+            # TODO: Confirm if this is the proper DXT format. 
+            raw_image = rapi.imageFromMortonOrder(raw_image, width, width)
+            tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_DXT5)
+
+        elif img_type == 5: # Xbox Morton order.
+        # Used in London stages and Kyoto skyboxes: s2_area16.txb, s5_area02.txb, s5_area18.txb, s3_tenkyu.txb, s6_tenkyu.txb
+            raw_image = rapi.imageFromMortonOrder(raw_image, width, width)
             tex1 = NoeTexture("Texture_" + str(a) + ".bmp", width, width, raw_image, noesis.NOESISTEX_RGBA32)
 
         else:
