@@ -1,6 +1,6 @@
 # Ollie King Stages V2 script (Arcade)
 # Noesis script by KC, 2023
-# Last updated: 4 June 2023
+# Last updated: 5 June 2023
 
 # ** WORK IN PROGRESS! **
 
@@ -8,7 +8,6 @@
 from inc_noesis import *
 
 import binascii
-
 
 def registerNoesisTypes():
     handle = noesis.register("Ollie King Stages 2 (Arcade)",".mdb")
@@ -30,15 +29,11 @@ def bcLoadModel(data, mdlList):
     mesh_num = 0
     firstTableSize = 0
     secondTablePtr = 0
-    currPos = 0x100
-    testForFormatString = False
+    # currPos = 0x100
     vert_count = 0
-    face_count = 0
-    vert_Stride_Value = None
-    UV_Stride_Value = None
-    Normals_Stride_Value = None
-    hasNormals = False
+    primType = 0
 
+    global bs # we operate the bit stream constantly so its gotta be global
     bs = NoeBitStream(data)
     ctx = rapi.rpgCreateContext()
 
@@ -48,6 +43,48 @@ def bcLoadModel(data, mdlList):
     mesh_name = curr_file.replace(".mdb", "")
     noesis.logPopup()
 
+    firstTablePtr = firstTableSearch() # Beginning of file reading is in here, gets us to the first line and reads it
+
+    meshInfo, firstTablePtr = formatDataSearch(firstTablePtr)
+
+    firstTablePtr += 0x20 # increments to the start of the first mesh
+    bs.seek(firstTablePtr)
+    print('CurrPos (should be at first mesh here): ' + hex(firstTablePtr))
+    meshStart = firstTablePtr
+
+    vertices = meshParse(meshInfo, meshStart) # should return vertices
+
+    faces = faceParse(meshInfo) # should return faces
+    
+    # After we incremented with this loop for tracking, we can now read faces and repeat (we are at the faces of the first mesh)
+    # faces = bs.readBytes(meshInfo["faceCount"] * 2)
+    # print(binascii.hexlify(faces))
+
+    rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
+    rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
+
+    if meshInfo["primType"] == 24:
+        rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
+        print("Tri-Strip prim type model found.")
+        mesh_num += 1
+    elif meshInfo["primType"] == 32:
+        rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
+        print("Triangles prim type model found.")
+        mesh_num += 1
+
+    try:
+        mdl = rapi.rpgConstructModel()
+        print("Worked")
+    except:
+        mdl = NoeModel()
+        print("Didn't work")
+
+    mdlList.append(mdl)
+
+    return 1
+
+def firstTableSearch():
+    currPos = 0x100
     bs.seek(0x4)
     firstTableSize = bs.readUInt() # first, get the first table's size. Needed for second table.
     print('First table size: ' + str(firstTableSize))
@@ -68,8 +105,17 @@ def bcLoadModel(data, mdlList):
     bs.seek(firstTablePtr) # goes to the first entry in the second table if read properly
     temp = bs.readUInt()
     print('First entry second table: ' + hex(temp))
+    return firstTablePtr
 
+def formatDataSearch(firstTablePtr):
     # Go down the second table and search for the format string at the end of it
+    testForFormatString = False
+    face_count = 0
+    vert_Stride_Value = None
+    UV_Stride_Value = None
+    Normals_Stride_Value = None
+    hasNormals = False
+    testForFormatString = False
     while testForFormatString != True:
         firstTablePtr += (0x20)
         bs.seek(firstTablePtr + 0x8)
@@ -81,6 +127,9 @@ def bcLoadModel(data, mdlList):
             print('Vert Count: ' + str(vert_count))
             face_count = bs.readUInt()
             print('Face Count: ' + str(face_count))
+            bs.seek(firstTablePtr + 0xC)
+            primType = bs.readUInt()
+            print('Prim type: ' + str(primType))
             testForFormatString = True
             print('Format string found: ' + hex(formatString))
 
@@ -109,51 +158,47 @@ def bcLoadModel(data, mdlList):
                 Normals_Stride_Value = 0x28
                 UV_Stride_Value = 0x32
                 hasNormals = True
+            
+            # dictionary is much easier to handle. Also pass back table ptr for scan operation to continue.
+            meshInfo = {
+                "vertCount": vert_count,
+                "faceCount": face_count,
+                "formatString": formatString,
+                "primType": primType,
+                "vertStride": vert_Stride_Value,
+                "normalStride": Normals_Stride_Value,
+                "uvStride": UV_Stride_Value,
+                "normals": bool(hasNormals)
+            }
 
-    firstTablePtr += 0x20 # increments to the start of the first mesh
-    bs.seek(firstTablePtr)
-    print('CurrPos: ' + hex(firstTablePtr))
-    meshStart = firstTablePtr
+            return meshInfo, firstTablePtr
 
+def meshParse(meshInfo, meshStart):
+    vertTrackOffset = meshStart
     vertices = bytes()
-    vertices = bs.readBytes(vert_count * vert_Stride_Value) # reads in the first mesh so far. Reads in the faces after readjusting the offset with the below loop
+    vertices = bs.readBytes(meshInfo["vertCount"] * meshInfo["vertStride"]) # reads in the first mesh so far. Reads in the faces after readjusting the offset with the below loop
     # vertList = bytearray(list(vertices))
     # # print(str(vertList))
     # print(", ".join(hex(b) for b in vertList))
 
-    vertCurrCount = 0
+    # vertCurrCount = 0
     vertTrackList = bytes()
     bs.seek(meshStart)
-    print('CurrPos: ' + hex(meshStart))
-    for v in range (vert_count*2):
-        vx, vy, vz = bs.read("3f")
-        vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
+    print('CurrPos (should be back to first position of first mesh after reading bytes here): ' + hex(meshStart))
+    if meshInfo["formatString"] == 0x0142:
+        # 3 floats of padding
+        for v in range (meshInfo["vertCount"]*2):
+            vx, vy, vz = bs.read("3f")
+            vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
+    elif meshInfo["formatString"] == 0x0242:
+        for v in range (meshInfo["vertCount"]):
+            vx, vy, vz = bs.read("3f")
+            vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
+            vertTrackOffset += 0x20
+            bs.seek(vertTrackOffset)
     
-    # After we incremented with this loop for tracking, we can now read faces and repeat (we are at the faces of the first mesh)
-    faces = bs.readBytes(face_count * 2)
-    print(binascii.hexlify(faces))
+    return vertices
 
-    rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
-    rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, vert_Stride_Value, 0)
-    rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, face_count, noesis.RPGEO_TRIANGLE_STRIP)
-
-    try:
-        mdl = rapi.rpgConstructModel()
-        print("Worked")
-    except:
-        mdl = NoeModel()
-        print("Didn't work")
-
-    mdlList.append(mdl)
-
-    return 1
-
-# NOTE: modularize the above into separate functions we can call instead of being wonky with loops
-# def tableSearch():
-# def meshParse():
-# def faceParse():
-
-    
-
-    
-
+def faceParse(meshInfo):
+    faces = bs.readBytes(meshInfo["faceCount"] * 2)
+    return faces
