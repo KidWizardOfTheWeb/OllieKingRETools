@@ -63,13 +63,27 @@ def bcLoadModel(data, mdlList):
     rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
     rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
 
+    # TODO: figure out what determines primitive type
+
     if meshInfo["primType"] == 24:
         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
         print("Tri-Strip prim type model found.")
         mesh_num += 1
     elif meshInfo["primType"] == 32:
-        rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
-        print("Triangles prim type model found.")
+        try:
+            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
+            print("Tri-Strip(?) prim type model found.")
+        except:
+            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
+            print("Triangles(?) prim type model found.")
+        mesh_num += 1
+    elif meshInfo["primType"] == 40:
+        try:
+            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
+            print("Tri-Strip(?) prim type model found.")
+        except:
+            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
+            print("Triangles(?) prim type model found.")
         mesh_num += 1
 
     try:
@@ -196,7 +210,19 @@ def meshParse(meshInfo, meshStart):
             vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
             vertTrackOffset += 0x20
             bs.seek(vertTrackOffset)
-    
+    elif meshInfo["formatString"] == 0x0112:
+        for v in range (meshInfo["vertCount"]):
+            vx, vy, vz = bs.read("3f")
+            vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
+            vertTrackOffset += 0x20
+            bs.seek(vertTrackOffset)
+    elif meshInfo["formatString"] == 0x0212:
+        for v in range (meshInfo["vertCount"]):
+            vx, vy, vz = bs.read("3f")
+            vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
+            vertTrackOffset += 0x28
+            bs.seek(vertTrackOffset)
+
     return vertices
 
 def faceParse(meshInfo):
