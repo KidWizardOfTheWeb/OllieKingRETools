@@ -134,7 +134,7 @@ def firstTableSearch():
         faceDataLengths[i][0] = bs.readUInt()
         bs.seek(currPos + 0xC)
         faceDataLengths[i][2] = bs.readInt()
-        print('face data length and tri-type: ' + str(faceDataLengths[i]))
+        # print('face data length and tri-type: ' + str(faceDataLengths[i]))
         currPos += 0x80
         bs.seek(currPos)
         
@@ -142,7 +142,7 @@ def firstTableSearch():
     bs.seek(currPos)
     for i in range (firstTableSize - 1):
         faceDataLengths[i][1] = bs.readUInt()
-        print('face data group ID: ' + str(faceDataLengths[i]))
+        # print('face data group ID: ' + str(faceDataLengths[i]))
 
     for i in range (len(faceDataLengths)):
         for j in range(0, len(faceDataLengths) - i - 1):
@@ -211,7 +211,7 @@ def formatDataSearch(firstTablePtr):
 
             # Depending on stage type, change vertex padding/stride. Noesis gets mad when switch cases show up so if-elif used ugh
             if formatString == 0x0142:
-                vert_Stride_Value = 0x12
+                vert_Stride_Value = 0x18
                 UV_Stride_Value = 0x16
                 hasNormals = False
                 #Normals start at vert_offset + 0xc
@@ -263,9 +263,11 @@ def meshParse(meshInfo, meshStart):
     print('CurrPos (should be back to first position of first mesh after reading bytes here): ' + hex(meshStart))
     if meshInfo["formatString"] == 0x0142:
         # 3 floats of padding
-        for v in range (meshInfo["vertCount"]*2):
+        for v in range (meshInfo["vertCount"]):
             vx, vy, vz = bs.read("3f")
             vertTrackList += noePack("3f", vx, vy, vz) # reads the pos and appends to verts bytes obj
+            vertTrackOffset += 0x18
+            bs.seek(vertTrackOffset)
     elif meshInfo["formatString"] == 0x0242:
         for v in range (meshInfo["vertCount"]):
             vx, vy, vz = bs.read("3f")
@@ -296,7 +298,7 @@ def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
         print('Current face data array: ' + str(faceDataArray[i]))
         if faceDataArray[i][2] == -1:
             faces = bs.readBytes(faceDataArray[i][0] * 6)
-            print("Current offset for after face values: "+ hex(bs.getOffset()))
+            # print("Current offset for after face values: "+ hex(bs.getOffset()))
 
             rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
             rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
@@ -316,7 +318,7 @@ def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
         i += 1
         mesh_num += 1
 
-        print("Current offset for pre calculation regulation: "+ hex(bs.getOffset()))
+        # print("Current offset for pre calculation regulation: "+ hex(bs.getOffset()))
         # bs.getOffset() // 10**0 % 10
         if (bs.getOffset() % 16 != 0):
             offsetRemainder = 16 - (bs.getOffset() % 16)
@@ -326,7 +328,7 @@ def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
             # offsetAdjust += 0x10
             print('offset adjust: ' + hex(offsetAdjust))
             bs.seek(offsetAdjust)
-        print("Current offset for post calculation regulation: "+ hex(bs.getOffset()))
+        # print("Current offset for post calculation regulation: "+ hex(bs.getOffset()))
 
     
 
