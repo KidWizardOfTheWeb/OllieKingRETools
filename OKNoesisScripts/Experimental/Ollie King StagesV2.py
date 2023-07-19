@@ -1,6 +1,6 @@
 # Ollie King Stages V2 script (Arcade)
 # Noesis script by KC, 2023
-# Last updated: 5 June 2023
+# Last updated: 19 July 2023
 
 # ** WORK IN PROGRESS! **
 
@@ -31,7 +31,8 @@ def bcLoadModel(data, mdlList):
     secondTablePtr = 0
     # currPos = 0x100
     vert_count = 0
-    primType = 0
+    formatLength = 0
+    faceDataArray = None
 
     global bs # we operate the bit stream constantly so its gotta be global
     bs = NoeBitStream(data)
@@ -43,7 +44,8 @@ def bcLoadModel(data, mdlList):
     mesh_name = curr_file.replace(".mdb", "")
     noesis.logPopup()
 
-    firstTablePtr = firstTableSearch() # Beginning of file reading is in here, gets us to the first line and reads it
+    firstTablePtr, faceDataArray = firstTableSearch() # Beginning of file reading is in here, gets us to the first line and reads it
+    # firstTableSubmeshInfo()
 
     meshInfo, firstTablePtr = formatDataSearch(firstTablePtr)
 
@@ -54,37 +56,41 @@ def bcLoadModel(data, mdlList):
 
     vertices = meshParse(meshInfo, meshStart) # should return vertices
 
-    faces = faceParse(meshInfo) # should return faces
+    faceParse(meshInfo, faceDataArray, vertices, mesh_name) # should return faces
     
     # After we incremented with this loop for tracking, we can now read faces and repeat (we are at the faces of the first mesh)
     # faces = bs.readBytes(meshInfo["faceCount"] * 2)
     # print(binascii.hexlify(faces))
 
-    rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
-    rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
+    # rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
+    # rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
 
-    # TODO: figure out what determines primitive type
+    # # TODO: figure out what determines primitive type
 
-    if meshInfo["primType"] == 24:
-        rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
-        print("Tri-Strip prim type model found.")
-        mesh_num += 1
-    elif meshInfo["primType"] == 32:
-        try:
-            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
-            print("Tri-Strip(?) prim type model found.")
-        except:
-            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
-            print("Triangles(?) prim type model found.")
-        mesh_num += 1
-    elif meshInfo["primType"] == 40:
-        try:
-            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
-            print("Tri-Strip(?) prim type model found.")
-        except:
-            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
-            print("Triangles(?) prim type model found.")
-        mesh_num += 1
+    # if meshInfo["formatLength"] == 24:
+    #     try:
+    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
+    #         print("Tri-Strip(?) prim type model found.")
+    #     except:
+    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
+    #         print("Triangles(?) prim type model found.")
+    #     mesh_num += 1
+    # elif meshInfo["formatLength"] == 32:
+    #     try:
+    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
+    #         print("Tri-Strip(?) prim type model found.")
+    #     except:
+    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
+    #         print("Triangles(?) prim type model found.")
+    #     mesh_num += 1
+    # elif meshInfo["formatLength"] == 40:
+    #     try:
+    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
+    #         print("Tri-Strip(?) prim type model found.")
+    #     except:
+    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
+    #         print("Triangles(?) prim type model found.")
+    #     mesh_num += 1
 
     try:
         mdl = rapi.rpgConstructModel()
@@ -97,17 +103,73 @@ def bcLoadModel(data, mdlList):
 
     return 1
 
+"""
+def firstTableSubmeshInfo():
+    submeshFaceCounts = [0]
+    bs.seek(0x98) # This is usually where the first table entry is.
+    tableEntryNum = bs.readUInt()
+    if tableEntryNum != 1:
+        return 1
+    
+    bs.seek(0xD4) # first entry's important data starts here
+
+
+
+"""
+
 def firstTableSearch():
-    currPos = 0x100
+    # currPos = 0x100
     bs.seek(0x4)
     firstTableSize = bs.readUInt() # first, get the first table's size. Needed for second table.
     print('First table size: ' + str(firstTableSize))
     if firstTableSize == 0:
         return 1
 
-    bs.seek(0x100)
+    # each entry here includes face data values for each section.
+    # first, create an array to store face data length, group ID, and tri-type
+    faceDataLengths = [[0 for i in range (3)] for j in range (firstTableSize)]
+    currPos = 0xD4 # all files start at D4, jump to this offset
+    bs.seek(currPos)
+    for i in range (firstTableSize - 1):
+        faceDataLengths[i][0] = bs.readUInt()
+        bs.seek(currPos + 0xC)
+        faceDataLengths[i][2] = bs.readInt()
+        print('face data length and tri-type: ' + str(faceDataLengths[i]))
+        currPos += 0x80
+        bs.seek(currPos)
+        
+    currPos -= 0x40 # move back due to final iteration of previous loop being ahead and record group IDs with this mini table
+    bs.seek(currPos)
+    for i in range (firstTableSize - 1):
+        faceDataLengths[i][1] = bs.readUInt()
+        print('face data group ID: ' + str(faceDataLengths[i]))
+
+    for i in range (len(faceDataLengths)):
+        for j in range(0, len(faceDataLengths) - i - 1):
+            if faceDataLengths[j][1] > faceDataLengths[j+1][1]:
+                temp = faceDataLengths[j]
+                faceDataLengths[j] = faceDataLengths[j+1]
+                faceDataLengths[j+1] = temp
+
+    faceDataLengths.remove([0, 0, 0]) # TODO: find out why another entry is generated with the bubble sort above
+    for i in range (len(faceDataLengths)):
+        if faceDataLengths[i][2] == -1:
+            pass
+        elif faceDataLengths[i][2] == -2:
+            faceDataLengths[i][0] += 2
+        print('sort list: ' + str(faceDataLengths[i]))
+
+    # use the above data for face reading, return to main body
+
+    currPos = 0x100
+    bs.seek(0x70) # jump to what points to what would be the possible ptr to the first offset of second table
+    firstTableEntry = bs.readInt()
+    print('First table entry: ' + str(hex(firstTableEntry)))
+
+    bs.seek(firstTableEntry)
+
     firstTablePtr = bs.readUInt() # check if there's a ptr to the first offset of second table
-    print('First table ptr: ' + str(firstTablePtr))
+    print('First table ptr: ' + str(hex(firstTablePtr)))
 
     while firstTablePtr == 0:
         currPos += 0x80
@@ -119,7 +181,7 @@ def firstTableSearch():
     bs.seek(firstTablePtr) # goes to the first entry in the second table if read properly
     temp = bs.readUInt()
     print('First entry second table: ' + hex(temp))
-    return firstTablePtr
+    return firstTablePtr, faceDataLengths
 
 def formatDataSearch(firstTablePtr):
     # Go down the second table and search for the format string at the end of it
@@ -142,8 +204,8 @@ def formatDataSearch(firstTablePtr):
             face_count = bs.readUInt()
             print('Face Count: ' + str(face_count))
             bs.seek(firstTablePtr + 0xC)
-            primType = bs.readUInt()
-            print('Prim type: ' + str(primType))
+            formatLength = bs.readUInt()
+            print('Prim type: ' + str(formatLength))
             testForFormatString = True
             print('Format string found: ' + hex(formatString))
 
@@ -178,7 +240,7 @@ def formatDataSearch(firstTablePtr):
                 "vertCount": vert_count,
                 "faceCount": face_count,
                 "formatString": formatString,
-                "primType": primType,
+                "formatLength": formatLength,
                 "vertStride": vert_Stride_Value,
                 "normalStride": Normals_Stride_Value,
                 "uvStride": UV_Stride_Value,
@@ -225,6 +287,49 @@ def meshParse(meshInfo, meshStart):
 
     return vertices
 
-def faceParse(meshInfo):
-    faces = bs.readBytes(meshInfo["faceCount"] * 2)
-    return faces
+def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
+    print("Current offset for face values: "+ hex(bs.getOffset()))
+
+    i = 0
+    mesh_num = 0
+    while faceDataArray[i][1] == 0:
+        print('Current face data array: ' + str(faceDataArray[i]))
+        if faceDataArray[i][2] == -1:
+            faces = bs.readBytes(faceDataArray[i][0] * 6)
+            print("Current offset for after face values: "+ hex(bs.getOffset()))
+
+            rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
+            rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
+
+            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, faceDataArray[i][0] * 3, noesis.RPGEO_TRIANGLE)
+            print("Triangles prim type model found.")
+            print("Current offset for after face values: "+ hex(bs.getOffset()))
+        elif faceDataArray[i][2] == -2:
+            faces = bs.readBytes(faceDataArray[i][0] * 2)
+
+            rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
+            rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
+
+            rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, faceDataArray[i][0], noesis.RPGEO_TRIANGLE_STRIP)
+            print("Tri-Strip prim type model found.")
+            print("Current offset for after face values: "+ hex(bs.getOffset()))
+        i += 1
+        mesh_num += 1
+
+        print("Current offset for pre calculation regulation: "+ hex(bs.getOffset()))
+        # bs.getOffset() // 10**0 % 10
+        if (bs.getOffset() % 16 != 0):
+            offsetRemainder = 16 - (bs.getOffset() % 16)
+            print('offset remainder: ' + hex(offsetRemainder))
+            offsetAdjust = bs.getOffset() + offsetRemainder
+            
+            # offsetAdjust += 0x10
+            print('offset adjust: ' + hex(offsetAdjust))
+            bs.seek(offsetAdjust)
+        print("Current offset for post calculation regulation: "+ hex(bs.getOffset()))
+
+    
+
+    # faces = bs.readBytes(meshInfo["faceCount"] * 2)
+    # print("Current offset for after face values: "+ hex(bs.getOffset()))
+    # return faces
