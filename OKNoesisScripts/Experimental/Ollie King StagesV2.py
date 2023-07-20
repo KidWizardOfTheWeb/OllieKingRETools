@@ -47,50 +47,35 @@ def bcLoadModel(data, mdlList):
     firstTablePtr, faceDataArray = firstTableSearch() # Beginning of file reading is in here, gets us to the first line and reads it
     # firstTableSubmeshInfo()
 
-    meshInfo, firstTablePtr = formatDataSearch(firstTablePtr)
+# loop from here to face parse for all sections
 
-    firstTablePtr += 0x20 # increments to the start of the first mesh
-    bs.seek(firstTablePtr)
-    print('CurrPos (should be at first mesh here): ' + hex(firstTablePtr))
-    meshStart = firstTablePtr
+    meshLoopCount = 0
+    for i in range (len(faceDataArray)):
+        if faceDataArray[i][1] > meshLoopCount:
+            meshLoopCount = faceDataArray[i][1]
+            print("Mesh loop count: " + str(meshLoopCount))
 
-    vertices = meshParse(meshInfo, meshStart) # should return vertices
+    meshGroupID = 0
+    for i in range (meshLoopCount + 1): # TODO: doesn't quite work fully yet. Find where exceptions and errors occur with this loop. Manually edit for the time being.
+        print("mesh group at this loop: " + str(meshGroupID))
+        meshInfo, firstTablePtr = formatDataSearch(firstTablePtr)
 
-    faceParse(meshInfo, faceDataArray, vertices, mesh_name) # should return faces
-    
-    # After we incremented with this loop for tracking, we can now read faces and repeat (we are at the faces of the first mesh)
-    # faces = bs.readBytes(meshInfo["faceCount"] * 2)
-    # print(binascii.hexlify(faces))
+        firstTablePtr += 0x20 # increments to the start of the first mesh
+        bs.seek(firstTablePtr)
+        print('CurrPos (should be at first mesh here): ' + hex(firstTablePtr))
+        meshStart = firstTablePtr
 
-    # rapi.rpgSetName(mesh_name + "_" + str(mesh_num))
-    # rapi.rpgBindPositionBufferOfs(vertices, noesis.RPGEODATA_FLOAT, meshInfo["vertStride"], 0)
+        vertices = meshParse(meshInfo, meshStart) # should return vertices
 
-    # # TODO: figure out what determines primitive type
+        faceParse(meshInfo, faceDataArray, vertices, mesh_name, meshGroupID) # should return faces
+        firstTablePtr = bs.getOffset() - 0x20
+        meshGroupID += 1
 
-    # if meshInfo["formatLength"] == 24:
-    #     try:
-    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
-    #         print("Tri-Strip(?) prim type model found.")
-    #     except:
-    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
-    #         print("Triangles(?) prim type model found.")
-    #     mesh_num += 1
-    # elif meshInfo["formatLength"] == 32:
-    #     try:
-    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
-    #         print("Tri-Strip(?) prim type model found.")
-    #     except:
-    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
-    #         print("Triangles(?) prim type model found.")
-    #     mesh_num += 1
-    # elif meshInfo["formatLength"] == 40:
-    #     try:
-    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE_STRIP)
-    #         print("Tri-Strip(?) prim type model found.")
-    #     except:
-    #         rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, meshInfo["faceCount"], noesis.RPGEO_TRIANGLE)
-    #         print("Triangles(?) prim type model found.")
-    #     mesh_num += 1
+    # for i in range (2):
+    #     vertices = meshParse(meshInfo, meshStart) # should return vertices
+
+    #     faceParse(meshInfo, faceDataArray, vertices, mesh_name) # should return faces
+    #     pass
 
     try:
         mdl = rapi.rpgConstructModel()
@@ -289,12 +274,23 @@ def meshParse(meshInfo, meshStart):
 
     return vertices
 
-def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
+def faceParse(meshInfo, faceDataArray, vertices, mesh_name, meshGroupID):
     print("Current offset for face values: "+ hex(bs.getOffset()))
 
-    i = 0
+    if meshGroupID == 0: i = 0
+    elif meshGroupID > 0: 
+        for j in range (len(faceDataArray)):
+            if faceDataArray[j][1] == meshGroupID:
+                i = j
+                # if j == len(faceDataArray):
+                #     i = 7
+                break
+    
+    print("Current mesh group offset in the list: " + str(i))
+
     mesh_num = 0
-    while faceDataArray[i][1] == 0:
+
+    while faceDataArray[i][1] == meshGroupID:
         print('Current face data array: ' + str(faceDataArray[i]))
         if faceDataArray[i][2] == -1:
             faces = bs.readBytes(faceDataArray[i][0] * 6)
@@ -315,8 +311,12 @@ def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
             rapi.rpgCommitTriangles(faces, noesis.RPGEODATA_USHORT, faceDataArray[i][0], noesis.RPGEO_TRIANGLE_STRIP)
             print("Tri-Strip prim type model found.")
             print("Current offset for after face values: "+ hex(bs.getOffset()))
+        if i + 1 >= len(faceDataArray):
+            print("Enter break")
+            break
         i += 1
         mesh_num += 1
+        
 
         # print("Current offset for pre calculation regulation: "+ hex(bs.getOffset()))
         # bs.getOffset() // 10**0 % 10
@@ -328,10 +328,11 @@ def faceParse(meshInfo, faceDataArray, vertices, mesh_name):
             # offsetAdjust += 0x10
             print('offset adjust: ' + hex(offsetAdjust))
             bs.seek(offsetAdjust)
+        
         # print("Current offset for post calculation regulation: "+ hex(bs.getOffset()))
 
     
 
     # faces = bs.readBytes(meshInfo["faceCount"] * 2)
-    # print("Current offset for after face values: "+ hex(bs.getOffset()))
+    print("Current offset for after face values: "+ hex(bs.getOffset()))
     # return faces
