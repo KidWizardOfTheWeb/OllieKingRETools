@@ -114,6 +114,7 @@ def bcLoadModel(data, mdlList):
     curr_file = rapi.getLocalFileName(rapi.getInputName()).lower()
 
     mesh_name = curr_file.replace(".mdb", "")
+    noesis.logPopup()
     # Some models have motion mesh versions, others are simple versions. If-statement below makes sure that the proper texture file names are read later if selected
     nunoCheck = False
     if "_nuno" in mesh_name:
@@ -190,6 +191,7 @@ def bcLoadModel(data, mdlList):
         print("text_num: " + hex(tex_num))
         bs.seek(offset)
         prim_type = bs.readUInt()							# 4 = triangles, 5 = strips
+        print("prim_type: " + str(prim_type))
         entry_type = bs.readUInt()
 
         if entry_type == 0x112:							# bone info
