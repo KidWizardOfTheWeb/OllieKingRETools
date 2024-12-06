@@ -1,5 +1,5 @@
 # Ollie King (Arcade)
-# Noesis script by KC 2022
+# Noesis script by DKDave (Original script), Joschka, and KC
 # Last updated: 10 August 2022
 
 # ** WORK IN PROGRESS! **
